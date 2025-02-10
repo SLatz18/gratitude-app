@@ -76,7 +76,7 @@ app.get('/api', (req, res) => {
   res.send('Gratitude API is running.');
 });
 
-// GET all entries (sorted by creation date descending)
+// GET all entries (sorted by creation date descending) test
 app.get('/api/entries', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM entries ORDER BY created_at DESC');
