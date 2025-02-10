@@ -11,34 +11,44 @@
     <input type="text" id="itemInput" placeholder="Enter item">
     <button onclick="addItem()">Add</button>
 
+    <h2>Stored Items:</h2>
     <ul id="itemsList"></ul>
 
     <script>
         const API_URL = "https://your-render-backend-url.com/items"; // Update with your Render API URL
 
         async function fetchItems() {
-            const response = await fetch(API_URL);
-            const items = await response.json();
-            const list = document.getElementById("itemsList");
-            list.innerHTML = "";
-            items.forEach(item => {
-                const li = document.createElement("li");
-                li.textContent = item.name;
-                list.appendChild(li);
-            });
+            try {
+                const response = await fetch(API_URL);
+                const items = await response.json();
+                const list = document.getElementById("itemsList");
+                list.innerHTML = ""; // Clear previous list
+
+                items.forEach(item => {
+                    const li = document.createElement("li");
+                    li.textContent = `${item.id}: ${item.name}`; // Display ID and name
+                    list.appendChild(li);
+                });
+            } catch (error) {
+                console.error("Error fetching items:", error);
+            }
         }
 
         async function addItem() {
             const input = document.getElementById("itemInput");
             const newItem = input.value.trim();
             if (newItem) {
-                await fetch(API_URL, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ name: newItem })
-                });
-                input.value = "";
-                fetchItems(); // Refresh the list
+                try {
+                    await fetch(API_URL, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ name: newItem })
+                    });
+                    input.value = ""; // Clear input
+                    fetchItems(); // Refresh the list
+                } catch (error) {
+                    console.error("Error adding item:", error);
+                }
             }
         }
 

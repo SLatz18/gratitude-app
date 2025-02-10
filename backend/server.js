@@ -32,6 +32,18 @@ app.get('/items', async (req, res) => {
     }
 });
 
+// Route to get all items from the database
+app.get('/items', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM items ORDER BY id DESC'); // Fetch all records
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
+
 // Add an item
 app.post('/items', async (req, res) => {
     try {
