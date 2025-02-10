@@ -15,6 +15,24 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
 
+// Function to initialize the database (create table if it doesn't exist)
+async function initDb() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS entries (
+        id SERIAL PRIMARY KEY,
+        content TEXT NOT NULL,
+        tags TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log('Database initialized and "entries" table is ready.');
+  } catch (err) {
+    console.error('Error initializing database:', err);
+  }
+}
+
 // ------------------
 // API Endpoints
 // ------------------
@@ -133,10 +151,8 @@ app.get('/', (req, res) => {
       <div id="entries"></div>
 
       <script>
-        // Since the API is served from the same domain, use a relative URL:
         const apiUrl = '/api/entries';
 
-        // Function to fetch and display all entries
         async function fetchEntries() {
           try {
             const response = await fetch(apiUrl);
@@ -159,7 +175,6 @@ app.get('/', (req, res) => {
           }
         }
 
-        // Handle form submission to create a new entry
         document.getElementById('entryForm').addEventListener('submit', async (e) => {
           e.preventDefault();
           const content = document.getElementById('content').value;
@@ -183,7 +198,6 @@ app.get('/', (req, res) => {
           }
         });
 
-        // Initial fetch when the page loads
         fetchEntries();
       </script>
     </body>
@@ -193,8 +207,10 @@ app.get('/', (req, res) => {
 });
 
 // ------------------
-// Start the Server
+// Start the Server after DB Initialization
 // ------------------
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+initDb().then(() => {
+  app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+  });
 });
