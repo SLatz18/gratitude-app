@@ -25,28 +25,36 @@ const openai = new OpenAI({
 
 // Function to auto-categorize journal entries using OpenAI
 async function categorizeEntry(text) {
-  const prompt = `Analyze the following journal entry and suggest two categories it fits into. The categories should be general themes such as "Family," "Work," "Health," "Personal Growth," "Hobbies," or "Community Service".\n\nEntry: "${text}"\n\nCategories:`;
-  
+  const prompt = `Analyze the following journal entry and output exactly two categories (from the list: Family, Work, Health, Personal Growth, Hobbies, Community Service) that best fit the entry.
+Return your answer in the format "Category1, Category2" with no additional text.
+
+Entry: "${text}"
+
+Answer:`;
+
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4-turbo", // Change to "gpt-3.5-turbo" if you lack access to GPT-4
+      model: "gpt-3.5-turbo", // or "gpt-3.5-turbo" if necessary
       messages: [{ role: "user", content: prompt }],
-      max_tokens: 50, // Increased token limit to allow a complete answer
+      max_tokens: 30,
       temperature: 0.5,
     });
     
     console.log("OpenAI response:", JSON.stringify(response, null, 2));
-    
-    // Extract categories from the response
     const output = response.choices[0].message.content.trim();
+    console.log("Parsed output:", output);
     const categories = output.split(',').map(c => c.trim());
-    
-    return categories.slice(0, 2); // Ensure we return two categories
+    if (categories.length < 2) {
+      console.warn("Unexpected format from OpenAI. Received:", output);
+      return ["Uncategorized", "Uncategorized"];
+    }
+    return categories.slice(0, 2);
   } catch (error) {
-    console.error("OpenAI API Error:", error);
+    console.error("OpenAI API Error:", error.response ? error.response.data : error);
     return ["Uncategorized", "Uncategorized"];
   }
 }
+
 
 // ------------------
 // Database Initialization
