@@ -18,13 +18,13 @@ const pool = new Pool({
 });
 
 // Function to initialize the database (create table if it doesn't exist)
+// Note: The "tags" column has been removed.
 async function initDb() {
   try {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS entries (
         id SERIAL PRIMARY KEY,
         content TEXT NOT NULL,
-        tags TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -70,13 +70,13 @@ app.get('/api/entries/:id', async (req, res) => {
   }
 });
 
-// POST to create a new entry
+// POST to create a new entry (only content)
 app.post('/api/entries', async (req, res) => {
   try {
-    const { content, tags } = req.body;
+    const { content } = req.body;
     const result = await pool.query(
-      'INSERT INTO entries (content, tags, created_at, updated_at) VALUES ($1, $2, NOW(), NOW()) RETURNING *',
-      [content, tags]
+      'INSERT INTO entries (content, created_at, updated_at) VALUES ($1, NOW(), NOW()) RETURNING *',
+      [content]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -85,14 +85,14 @@ app.post('/api/entries', async (req, res) => {
   }
 });
 
-// PUT to update an existing entry by id
+// PUT to update an existing entry by id (only content)
 app.put('/api/entries/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { content, tags } = req.body;
+    const { content } = req.body;
     const result = await pool.query(
-      'UPDATE entries SET content = $1, tags = $2, updated_at = NOW() WHERE id = $3 RETURNING *',
-      [content, tags, id]
+      'UPDATE entries SET content = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+      [content, id]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Entry not found' });
@@ -139,7 +139,7 @@ app.get('/', (req, res) => {
           margin: 0;
           padding: 20px;
         }
-        h1, h2, h3 {
+        h1, h2 {
           color: #486581;
         }
         form {
@@ -149,7 +149,7 @@ app.get('/', (req, res) => {
           box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
           margin-bottom: 20px;
         }
-        textarea, input[type="text"] {
+        textarea {
           width: 100%;
           padding: 10px;
           margin: 10px 0;
@@ -176,6 +176,11 @@ app.get('/', (req, res) => {
           border-radius: 8px;
           box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
+        .entry-date {
+          font-size: 0.85em;
+          color: #888;
+          margin-bottom: 5px;
+        }
       </style>
     </head>
     <body>
@@ -183,8 +188,6 @@ app.get('/', (req, res) => {
 
       <form id="entryForm">
         <textarea id="content" rows="4" cols="50" placeholder="What are you grateful for?"></textarea>
-        <br>
-        <input type="text" id="tags" placeholder="Tags (comma separated)">
         <br>
         <button type="submit">Add Entry</button>
       </form>
@@ -205,9 +208,8 @@ app.get('/', (req, res) => {
               const entryDiv = document.createElement('div');
               entryDiv.className = 'entry';
               entryDiv.innerHTML = \`
-                <h3>\${new Date(entry.created_at).toLocaleString()}</h3>
+                <p class="entry-date">\${new Date(entry.created_at).toLocaleString()}</p>
                 <p>\${entry.content}</p>
-                <p><strong>Tags:</strong> \${entry.tags || ''}</p>
               \`;
               entriesDiv.appendChild(entryDiv);
             });
@@ -219,17 +221,15 @@ app.get('/', (req, res) => {
         document.getElementById('entryForm').addEventListener('submit', async (e) => {
           e.preventDefault();
           const content = document.getElementById('content').value;
-          const tags = document.getElementById('tags').value;
 
           try {
             const response = await fetch(apiUrl, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ content, tags })
+              body: JSON.stringify({ content })
             });
             if (response.ok) {
               document.getElementById('content').value = '';
-              document.getElementById('tags').value = '';
               fetchEntries();
             } else {
               console.error('Error adding entry');
