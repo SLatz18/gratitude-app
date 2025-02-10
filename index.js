@@ -27,12 +27,12 @@ const prompt = Analyze the following journal entry and suggest two categories it
 try {
 const response = await openai.completions.create({
 model: "gpt-4-turbo",
-prompt: prompt,
+messages: [{ role: "user", content: prompt }],
 max_tokens: 20,
 temperature: 0.5,
 });
 
-const categories = response.choices[0].text.trim().split(',').map(c => c.trim());
+const categories = response.choices[0].message.content.trim().split(',').map(c => c.trim());
 return categories.slice(0, 2); // Ensure we only take two categories
 
 } catch (error) {
