@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Database App</title>
+</head>
+<body>
+    <h1>Simple Database App</h1>
+
+    <input type="text" id="itemInput" placeholder="Enter item">
+    <button onclick="addItem()">Add</button>
+
+    <ul id="itemsList"></ul>
+
+    <script>
+        const API_URL = "https://your-render-backend-url.com/items"; // Update with your Render API URL
+
+        async function fetchItems() {
+            const response = await fetch(API_URL);
+            const items = await response.json();
+            const list = document.getElementById("itemsList");
+            list.innerHTML = "";
+            items.forEach(item => {
+                const li = document.createElement("li");
+                li.textContent = item.name;
+                list.appendChild(li);
+            });
+        }
+
+        async function addItem() {
+            const input = document.getElementById("itemInput");
+            const newItem = input.value.trim();
+            if (newItem) {
+                await fetch(API_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name: newItem })
+                });
+                input.value = "";
+                fetchItems(); // Refresh the list
+            }
+        }
+
+        // Load items when the page loads
+        fetchItems();
+    </script>
+</body>
+</html>
