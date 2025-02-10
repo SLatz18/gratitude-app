@@ -25,6 +25,7 @@ The Gratitude App is designed to help users document daily moments of gratitude.
 - **Update & Delete:** API endpoints for updating and removing entries.
 - **Automatic Table Initialization:** The PostgreSQL table (`entries`) is created programmatically if it doesn't exist.
 - **Responsive UI:** A simple HTML/JavaScript front end to interact with the API.
+- **Test**
 
 ## Tech Stack
 
