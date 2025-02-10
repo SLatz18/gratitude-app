@@ -1,8 +1,7 @@
-require('dotenv').config(); // Load environment variables
+require('dotenv').config();
 
-const OpenAI = require('openai').default; // Using OpenAI v4
 const express = require('express');
-const bodyParser = require('body-parser');
+const bodyParser = require('body-parser'); // Optional, as Express 4.16+ includes JSON parsing
 const cors = require('cors');
 const { Pool } = require('pg');
 
@@ -13,53 +12,12 @@ const port = process.env.PORT || 3000;
 app.use(bodyParser.json());
 app.use(cors());
 
-// PostgreSQL connection
+// Initialize PostgreSQL connection using Render's environment variable
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
-
-// Function to auto-categorize journal entries using OpenAI
-async function categorizeEntry(text) {
-  const prompt = `Analyze the following journal entry and output exactly two categories (from the list: Family, Work, Health, Personal Growth, Hobbies, Community Service) that best fit the entry.
-Return your answer in the format "Category1, Category2" with no additional text.
-
-Entry: "${text}"
-
-Answer:`;
-
-  try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo", // or "gpt-3.5-turbo" if necessary
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 30,
-      temperature: 0.5,
-    });
-    
-    console.log("OpenAI response:", JSON.stringify(response, null, 2));
-    const output = response.choices[0].message.content.trim();
-    console.log("Parsed output:", output);
-    const categories = output.split(',').map(c => c.trim());
-    if (categories.length < 2) {
-      console.warn("Unexpected format from OpenAI. Received:", output);
-      return ["Uncategorized", "Uncategorized"];
-    }
-    return categories.slice(0, 2);
-  } catch (error) {
-    console.error("OpenAI API Error:", error.response ? error.response.data : error);
-    return ["Uncategorized", "Uncategorized"];
-  }
-}
-
-
-// ------------------
-// Database Initialization
-// ------------------
-// Update the table creation to include auto-categorization columns.
+// Function to initialize the database (create table if it doesn't exist)
 async function initDb() {
   try {
     await pool.query(`
@@ -67,8 +25,6 @@ async function initDb() {
         id SERIAL PRIMARY KEY,
         content TEXT NOT NULL,
         tags TEXT,
-        category1 TEXT,
-        category2 TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -114,20 +70,18 @@ app.get('/api/entries/:id', async (req, res) => {
   }
 });
 
-// POST to create a new entry with auto-categorization
+// POST to create a new entry
 app.post('/api/entries', async (req, res) => {
   try {
     const { content, tags } = req.body;
-    // Get categories from OpenAI based on the content
-    const [category1, category2] = await categorizeEntry(content);
     const result = await pool.query(
-      'INSERT INTO entries (content, tags, category1, category2, created_at, updated_at) VALUES ($1, $2, $3, $4, NOW(), NOW()) RETURNING *',
-      [content, tags, category1, category2]
+      'INSERT INTO entries (content, tags, created_at, updated_at) VALUES ($1, $2, NOW(), NOW()) RETURNING *',
+      [content, tags]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Database or AI processing error' });
+    res.status(500).json({ error: 'Database error' });
   }
 });
 
@@ -213,7 +167,6 @@ app.get('/', (req, res) => {
                 <h3>\${new Date(entry.created_at).toLocaleString()}</h3>
                 <p>\${entry.content}</p>
                 <p><strong>Tags:</strong> \${entry.tags || ''}</p>
-                <p><strong>Categories:</strong> \${entry.category1 || ''}\${entry.category2 ? ', ' + entry.category2 : ''}</p>
               \`;
               entriesDiv.appendChild(entryDiv);
             });
