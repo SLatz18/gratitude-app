@@ -26,18 +26,22 @@ const openai = new OpenAI({
 // Function to auto-categorize journal entries using OpenAI
 async function categorizeEntry(text) {
   const prompt = `Analyze the following journal entry and suggest two categories it fits into. The categories should be general themes such as "Family," "Work," "Health," "Personal Growth," "Hobbies," or "Community Service".\n\nEntry: "${text}"\n\nCategories:`;
+  
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4-turbo",
+      model: "gpt-4-turbo", // Change to "gpt-3.5-turbo" if you lack access to GPT-4
       messages: [{ role: "user", content: prompt }],
-      max_tokens: 20,
+      max_tokens: 50, // Increased token limit to allow a complete answer
       temperature: 0.5,
     });
-    const categories = response.choices[0].message.content
-      .trim()
-      .split(',')
-      .map(c => c.trim());
-    return categories.slice(0, 2);
+    
+    console.log("OpenAI response:", JSON.stringify(response, null, 2));
+    
+    // Extract categories from the response
+    const output = response.choices[0].message.content.trim();
+    const categories = output.split(',').map(c => c.trim());
+    
+    return categories.slice(0, 2); // Ensure we return two categories
   } catch (error) {
     console.error("OpenAI API Error:", error);
     return ["Uncategorized", "Uncategorized"];
