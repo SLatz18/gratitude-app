@@ -6,20 +6,36 @@
   <title>Gratitude Journal</title>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
-</head>
-<body>
-  <h1>Gratitude Journal</h1>
-  <form id="entryForm">
-    <textarea id="content" rows="4" cols="50" placeholder="What are you grateful for?"></textarea>
-    <br>
-    <button type="submit">Add Entry</button>
-  </form>
-  <h2>Your Entries</h2>
-  <div id="entries"></div>
-  <h2>Shared Gratitude Word Cloud</h2>
-  <div id="wordCloud"></div>
+  <!-- Include D3 and d3-cloud -->
   <script src="https://d3js.org/d3.v5.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-cloud/1.2.5/d3.layout.cloud.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Gratitude Journal</h1>
+    <form id="entryForm">
+      <textarea id="content" rows="4" cols="50" placeholder="What are you grateful for?"></textarea>
+      <br>
+      <button type="submit">Add Entry</button>
+    </form>
+  </header>
+  
+  <main>
+    <section class="left-column">
+      <h2>Your Entries (Current Session)</h2>
+      <div id="entries"></div>
+    </section>
+    
+    <section class="right-column">
+      <h2>Shared Gratitude Word Cloud</h2>
+      <div id="wordCloud"></div>
+    </section>
+  </main>
+  
+  <footer>
+    <p>&copy; 2025 Gratitude Journal</p>
+  </footer>
+  
   <script src="/script.js"></script>
 </body>
 </html>

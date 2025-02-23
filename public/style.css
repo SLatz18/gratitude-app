@@ -6,19 +6,20 @@ body {
   padding: 20px;
 }
 
-h1, h2 {
+header {
+  background: #fff;
+  padding: 20px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+header h1 {
+  margin-top: 0;
   color: #486581;
 }
 
-form {
-  background: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
-}
-
-textarea {
+form textarea {
   width: 100%;
   padding: 10px;
   margin: 10px 0;
@@ -27,7 +28,7 @@ textarea {
   font-size: 16px;
 }
 
-button {
+form button {
   background-color: #486581;
   color: #fff;
   border: none;
@@ -37,10 +38,26 @@ button {
   cursor: pointer;
 }
 
-button:hover {
+form button:hover {
   background-color: #3a536b;
 }
 
+main {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.left-column,
+.right-column {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  flex: 1 1 300px; /* Each column takes at least 300px */
+}
+
+/* Entry styling */
 .entry {
   background: #fff;
   padding: 15px;
@@ -61,11 +78,16 @@ button:hover {
   margin-bottom: 5px;
 }
 
-/* Word cloud styling */
+/* Word cloud container */
 #wordCloud {
-  padding: 10px;
-  background: #fff;
-  border-radius: 8px;
+  width: 100%;
+  height: 300px;
+  overflow: hidden;
+}
+  
+footer {
+  text-align: center;
   margin-top: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-size: 0.9em;
+  color: #888;
 }
