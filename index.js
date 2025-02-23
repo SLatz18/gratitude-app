@@ -112,15 +112,22 @@ app.post('/api/entries', async (req, res) => {
     });
     
     // Log the full response for debugging
-    console.log("Full OpenAI response:", aiResponse);
+    console.log("Full OpenAI response:", JSON.stringify(aiResponse, null, 2));
     
-    // Check that the response structure is as expected
-    if (!aiResponse.data || !aiResponse.data.choices || aiResponse.data.choices.length === 0) {
-      console.error("Unexpected OpenAI response:", aiResponse.data);
-      throw new Error("OpenAI API returned no choices");
+    // Log the message object from the first choice
+    const firstChoice = aiResponse.data.choices[0];
+    console.log("Choice message object:", JSON.stringify(firstChoice.message, null, 2));
+    
+    // Try to get the category from either the 'content' or 'text' property
+    let category;
+    if (firstChoice.message.content) {
+      category = firstChoice.message.content;
+    } else if (firstChoice.message.text) {
+      category = firstChoice.message.text;
+    } else {
+      throw new Error("OpenAI API returned no content in the message");
     }
-    
-    const category = aiResponse.data.choices[0].message.content.trim();
+    category = category.trim();
     console.log(`Categorized entry as: ${category}`);
     
     // Insert the new entry along with its category into the database.
