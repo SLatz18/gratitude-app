@@ -74,7 +74,7 @@ async function updateWordCloud() {
 
   // Create the layout for the word cloud
   const layout = d3.layout.cloud()
-    .size([600, 300])
+    .size([600, 400])
     .words(words)
     .padding(2) //less padding
     .rotate(() => ~~(Math.random() * 2) * 90)
