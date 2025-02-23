@@ -38,14 +38,11 @@ async function initDb() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
-    console.log('Table "entries" is ready.');
-
     // Add the "category" column if it doesn't already exist.
     await pool.query(`
       ALTER TABLE entries 
       ADD COLUMN IF NOT EXISTS category VARCHAR(50);
     `);
-    console.log('Column "category" is ready.');
   } catch (err) {
     console.error('Error initializing database:', err);
   }
@@ -87,7 +84,7 @@ app.get('/api/entries/:id', async (req, res) => {
 });
 
 // POST to create a new entry (with content)
-// Modified to call OpenAI for categorization before inserting into the database.
+// Calls OpenAI for categorization before inserting into the database.
 app.post('/api/entries', async (req, res) => {
   try {
     const { content } = req.body;
@@ -96,7 +93,6 @@ app.post('/api/entries', async (req, res) => {
     }
     
     // Build messages for chat completions with an example list of categories for guidance.
-    // The assistant is free to choose any category it deems appropriate.
     const messages = [
       {
         role: 'system',
@@ -116,15 +112,11 @@ app.post('/api/entries', async (req, res) => {
       model: modelName,
       messages,
       max_tokens: 10,
-      temperature: 0, // low temperature for deterministic output
+      temperature: 0,
     });
     
-    // Log the full response for debugging
-    console.log("Full OpenAI response:", JSON.stringify(aiResponse, null, 2));
-    
-    // Check that the response structure is as expected
+    // Validate response structure
     if (!aiResponse.choices || aiResponse.choices.length === 0) {
-      console.error("Unexpected OpenAI response:", aiResponse);
       throw new Error("OpenAI API returned no choices");
     }
     
@@ -138,7 +130,6 @@ app.post('/api/entries', async (req, res) => {
       throw new Error("OpenAI API returned no content in the message");
     }
     category = category.trim();
-    console.log(`Categorized entry as: ${category}`);
     
     // Insert the new entry along with its category into the database.
     const result = await pool.query(
