@@ -1,41 +1,7 @@
-// Fetch current session entries
-async function fetchEntries() {
-  try {
-    const response = await fetch('/api/public-entries');
-    const entries = await response.json();
-    const entriesDiv = document.getElementById('entries');
-    entriesDiv.innerHTML = '';
-    entries.forEach(entry => {
-      const entryDiv = document.createElement('div');
-      entryDiv.className = 'entry';
-      entryDiv.innerHTML = `
-        <p class="entry-date">${new Date(entry.created_at).toLocaleString()}</p>
-        <p class="entry-category">${entry.category || 'Uncategorized'}</p>
-        <p>${entry.content}</p>
-      `;
-      entriesDiv.appendChild(entryDiv);
-    });
-  } catch (err) {
-    console.error('Error fetching entries:', err);
-  }
-}
-
-// Fetch all entries (for word cloud)
-async function fetchAllEntries() {
-  try {
-    const response = await fetch('/api/all-entries');
-    const entries = await response.json();
-    return entries;
-  } catch (err) {
-    console.error('Error fetching all entries:', err);
-    return [];
-  }
-}
-
-// Update the word cloud using all entries (excluding uncategorized)
+// Update the word cloud using all entries (excluding "Uncategorized" unless needed to fill to 10 words)
 async function updateWordCloud() {
   const entries = await fetchAllEntries();
-  // Count frequency of each category, skipping entries with no category or "Uncategorized"
+  // Count frequency of each category
   const freq = {};
   entries.forEach(entry => {
     const category = entry.category;
@@ -44,9 +10,21 @@ async function updateWordCloud() {
     }
   });
 
-  const words = Object.keys(freq)
-    .filter(word => freq[word] > 1)
-    .map(word => ({ text: word, size: 10 + freq[word] * 10 }));
+  // First, take only categories that appear at least twice
+  let categories = Object.keys(freq).filter(word => freq[word] > 1);
+  
+  // If fewer than 10 categories meet that criterion and there are more categories available,
+  // include those with a frequency of 1 to fill out the word cloud.
+  if (categories.length < 10) {
+    // Use all available categories (which may include some that appear once)
+    categories = Object.keys(freq);
+  }
+  
+  // Map each category to a word object with a size based on its frequency.
+  const words = categories.map(word => ({
+    text: word,
+    size: 10 + freq[word] * 10
+  }));
 
   d3.select('#wordCloud').html('');
 
@@ -79,27 +57,3 @@ async function updateWordCloud() {
       .text(d => d.text);
   }
 }
-
-document.getElementById('entryForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const content = document.getElementById('content').value;
-  try {
-    const response = await fetch('/api/entries', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content })
-    });
-    if (response.ok) {
-      document.getElementById('content').value = '';
-      fetchEntries();
-      updateWordCloud();
-    } else {
-      console.error('Error adding entry');
-    }
-  } catch (err) {
-    console.error('Error:', err);
-  }
-});
-
-fetchEntries();
-updateWordCloud();
