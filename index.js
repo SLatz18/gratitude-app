@@ -14,13 +14,15 @@ const openai = new OpenAI({
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Define a session start time for public entries
+const sessionStartTime = new Date();
+
 // Middleware
 app.use(bodyParser.json());
 app.use(cors());
 // Serve static files from the "public" folder
 app.use(express.static('public'));
 
-// Initialize PostgreSQL connection using Render's environment variable
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
@@ -29,7 +31,7 @@ const pool = new Pool({
 // and add the 'category' column if needed.
 async function initDb() {
   try {
-    // Create table if not exists
+    // Create table if it doesn't exist
     await pool.query(`
       CREATE TABLE IF NOT EXISTS entries (
         id SERIAL PRIMARY KEY,
@@ -38,11 +40,12 @@ async function initDb() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
-    // Add the "category" column if it doesn't already exist.
+    // Add the "category" column if it doesn't exist.
     await pool.query(`
       ALTER TABLE entries 
       ADD COLUMN IF NOT EXISTS category VARCHAR(50);
     `);
+    console.log('Database initialized.');
   } catch (err) {
     console.error('Error initializing database:', err);
   }
@@ -57,8 +60,26 @@ app.get('/api', (req, res) => {
   res.send('Gratitude API is running.');
 });
 
-// GET all entries (sorted by creation date descending)
-app.get('/api/entries', async (req, res) => {
+// Public entries: only show entries created during the current session.
+app.get('/api/public-entries', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM entries WHERE created_at >= $1 ORDER BY created_at DESC',
+      [sessionStartTime]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Secret entries: returns all entries; requires a password query parameter matching process.env.LIST_PASSWORD.
+app.get('/api/secret-entries', async (req, res) => {
+  const { password } = req.query;
+  if (password !== process.env.LIST_PASSWORD) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   try {
     const result = await pool.query('SELECT * FROM entries ORDER BY created_at DESC');
     res.json(result.rows);
@@ -92,7 +113,7 @@ app.post('/api/entries', async (req, res) => {
       return res.status(400).json({ error: 'Content is required' });
     }
     
-    // Build messages for chat completions with an example list of categories for guidance.
+    // Build messages for chat completions with examples for guidance.
     const messages = [
       {
         role: 'system',
@@ -115,7 +136,6 @@ app.post('/api/entries', async (req, res) => {
       temperature: 0,
     });
     
-    // Validate response structure
     if (!aiResponse.choices || aiResponse.choices.length === 0) {
       throw new Error("OpenAI API returned no choices");
     }
@@ -131,7 +151,6 @@ app.post('/api/entries', async (req, res) => {
     }
     category = category.trim();
     
-    // Insert the new entry along with its category into the database.
     const result = await pool.query(
       'INSERT INTO entries (content, category, created_at, updated_at) VALUES ($1, $2, NOW(), NOW()) RETURNING *',
       [content, category]
