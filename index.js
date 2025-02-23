@@ -5,7 +5,7 @@ const bodyParser = require('body-parser'); // Optional, as Express 4.16+ include
 const cors = require('cors');
 const { Pool } = require('pg');
 
-// Initialize OpenAI client (for v4, use the default export)
+// Initialize OpenAI client (using v4 syntax with chat completions)
 const OpenAI = require('openai');
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY, // Ensure your OPENAI_API_KEY is set in your environment
@@ -88,21 +88,28 @@ app.post('/api/entries', async (req, res) => {
       return res.status(400).json({ error: 'Content is required' });
     }
     
-    // Build a prompt for categorization. Adjust categories as needed.
-    const prompt = `Categorize the following gratitude entry into one of these categories: Family, Friends, Work, Health, Personal Growth, or Other.
+    // Build messages for chat completions
+    const messages = [
+      {
+        role: 'system',
+        content: "You are a helpful categorization assistant. When given a gratitude entry, you will categorize it into one of the following categories: Family, Friends, Work, Health, Personal Growth, or Other. Respond with only the category name.",
+      },
+      {
+        role: 'user',
+        content: `Categorize the following gratitude entry: "${content}"`,
+      }
+    ];
     
-Entry: "${content}"`;
-
-    // Call OpenAI API to get the category.
-    const aiResponse = await openai.completions.create({
-      model: 'text-davinci-003',
-      prompt,
+    // Call OpenAI chat completions API using "gpt-4o-mini"
+    const aiResponse = await openai.chat.completions.create({
+      model: 'gpt-4o-mini', // Change this to a supported model if necessary
+      messages,
       max_tokens: 10,
       temperature: 0, // low temperature for deterministic output
     });
-    const category = aiResponse.data.choices[0].text.trim();
+    const category = aiResponse.data.choices[0].message.content.trim();
     console.log(`Categorized entry as: ${category}`);
-
+    
     // Insert the new entry along with its category into the database.
     const result = await pool.query(
       'INSERT INTO entries (content, category, created_at, updated_at) VALUES ($1, $2, NOW(), NOW()) RETURNING *',
