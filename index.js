@@ -92,7 +92,7 @@ app.post('/api/entries', async (req, res) => {
     const messages = [
       {
         role: 'system',
-        content: "You are a helpful categorization assistant. When given a gratitude entry, you will categorize it into one of the following categories: Family, Friends, Work, Health, Personal Growth, or Other. Respond with only the category name.",
+        content: "You are a helpful categorization assistant. When given a gratitude entry, categorize it into one of the following: Family, Friends, Work, Health, Personal Growth, or Other. Respond with only the category name.",
       },
       {
         role: 'user',
@@ -100,13 +100,19 @@ app.post('/api/entries', async (req, res) => {
       }
     ];
     
-    // Call OpenAI chat completions API using "gpt-4o-mini"
+    // Use GPT-3.5-turbo model
+    const modelName = 'gpt-3.5-turbo';
+    
+    // Call OpenAI chat completions API
     const aiResponse = await openai.chat.completions.create({
-      model: 'gpt-4o-mini', // Change this to a supported model if necessary
+      model: modelName,
       messages,
       max_tokens: 10,
       temperature: 0, // low temperature for deterministic output
     });
+    
+    // Log the full response for debugging
+    console.log("Full OpenAI response:", aiResponse);
     
     // Check that the response structure is as expected
     if (!aiResponse.data || !aiResponse.data.choices || aiResponse.data.choices.length === 0) {
