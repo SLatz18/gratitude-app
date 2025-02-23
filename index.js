@@ -3,7 +3,9 @@ require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser'); // Optional, as Express 4.16+ includes JSON parsing
 const cors = require('cors');
+const session = require('express-session');
 const { Pool } = require('pg');
+const crypto = require('crypto');
 
 // Initialize OpenAI client (using v4 syntax with chat completions)
 const OpenAI = require('openai');
@@ -14,21 +16,29 @@ const openai = new OpenAI({
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Define a session start time for public entries
-const sessionStartTime = new Date();
+// Generate a random session secret if not provided
+const sessionSecret = process.env.SESSION_SECRET || crypto.randomBytes(16).toString('hex');
 
 // Middleware
 app.use(bodyParser.json());
 app.use(cors());
+app.use(
+  session({
+    secret: sessionSecret,
+    resave: false,
+    saveUninitialized: true,
+  })
+);
 // Serve static files from the "public" folder
 app.use(express.static('public'));
 
+// Initialize PostgreSQL connection using Render's environment variable
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
 // Function to initialize the database (create table if it doesn't exist)
-// and add the 'category' column if needed.
+// and add the 'category' and 'session_id' columns if needed.
 async function initDb() {
   try {
     // Create table if it doesn't exist
@@ -40,10 +50,15 @@ async function initDb() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
-    // Add the "category" column if it doesn't exist.
+    // Add the "category" column if it doesn't already exist.
     await pool.query(`
       ALTER TABLE entries 
       ADD COLUMN IF NOT EXISTS category VARCHAR(50);
+    `);
+    // Add the "session_id" column if it doesn't already exist.
+    await pool.query(`
+      ALTER TABLE entries 
+      ADD COLUMN IF NOT EXISTS session_id TEXT;
     `);
     console.log('Database initialized.');
   } catch (err) {
@@ -60,12 +75,12 @@ app.get('/api', (req, res) => {
   res.send('Gratitude API is running.');
 });
 
-// Public entries: only show entries created during the current session.
+// Public entries: show only entries created during the current session (by device)
 app.get('/api/public-entries', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM entries WHERE created_at >= $1 ORDER BY created_at DESC',
-      [sessionStartTime]
+      'SELECT * FROM entries WHERE session_id = $1 ORDER BY created_at DESC',
+      [req.sessionID]
     );
     res.json(result.rows);
   } catch (err) {
@@ -106,6 +121,7 @@ app.get('/api/entries/:id', async (req, res) => {
 
 // POST to create a new entry (with content)
 // Calls OpenAI for categorization before inserting into the database.
+// Also saves the current session ID with the entry.
 app.post('/api/entries', async (req, res) => {
   try {
     const { content } = req.body;
@@ -113,7 +129,7 @@ app.post('/api/entries', async (req, res) => {
       return res.status(400).json({ error: 'Content is required' });
     }
     
-    // Build messages for chat completions with examples for guidance.
+    // Build messages for chat completions with an example list for guidance.
     const messages = [
       {
         role: 'system',
@@ -125,10 +141,8 @@ app.post('/api/entries', async (req, res) => {
       }
     ];
     
-    // Use GPT-3.5-turbo model
     const modelName = 'gpt-3.5-turbo';
     
-    // Call OpenAI chat completions API
     const aiResponse = await openai.chat.completions.create({
       model: modelName,
       messages,
@@ -152,8 +166,8 @@ app.post('/api/entries', async (req, res) => {
     category = category.trim();
     
     const result = await pool.query(
-      'INSERT INTO entries (content, category, created_at, updated_at) VALUES ($1, $2, NOW(), NOW()) RETURNING *',
-      [content, category]
+      'INSERT INTO entries (content, category, session_id, created_at, updated_at) VALUES ($1, $2, $3, NOW(), NOW()) RETURNING *',
+      [content, category, req.sessionID]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
