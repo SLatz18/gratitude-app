@@ -114,16 +114,18 @@ app.post('/api/entries', async (req, res) => {
     // Log the full response for debugging
     console.log("Full OpenAI response:", JSON.stringify(aiResponse, null, 2));
     
-    // Log the message object from the first choice
-    const firstChoice = aiResponse.data.choices[0];
-    console.log("Choice message object:", JSON.stringify(firstChoice.message, null, 2));
+    // Check that the response structure is as expected (without .data)
+    if (!aiResponse.choices || aiResponse.choices.length === 0) {
+      console.error("Unexpected OpenAI response:", aiResponse);
+      throw new Error("OpenAI API returned no choices");
+    }
     
-    // Try to get the category from either the 'content' or 'text' property
+    const firstChoice = aiResponse.choices[0];
     let category;
-    if (firstChoice.message.content) {
+    if (firstChoice.message && firstChoice.message.content) {
       category = firstChoice.message.content;
-    } else if (firstChoice.message.text) {
-      category = firstChoice.message.text;
+    } else if (firstChoice.text) {
+      category = firstChoice.text;
     } else {
       throw new Error("OpenAI API returned no content in the message");
     }
