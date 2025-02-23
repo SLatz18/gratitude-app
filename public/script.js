@@ -11,6 +11,7 @@ async function fetchEntries() {
       entryDiv.className = 'entry';
       entryDiv.innerHTML = `
         <p class="entry-date">${new Date(entry.created_at).toLocaleString()}</p>
+        <p class="entry-category">Category: ${entry.category || 'Uncategorized'}</p>
         <p>${entry.content}</p>
       `;
       entriesDiv.appendChild(entryDiv);
