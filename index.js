@@ -26,19 +26,26 @@ const pool = new Pool({
 });
 
 // Function to initialize the database (create table if it doesn't exist)
-// Updated the table to include a 'category' column
+// and add the 'category' column if it doesn't exist.
 async function initDb() {
   try {
+    // Create table if not exists
     await pool.query(`
       CREATE TABLE IF NOT EXISTS entries (
         id SERIAL PRIMARY KEY,
         content TEXT NOT NULL,
-        category VARCHAR(50),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
-    console.log('Database initialized and "entries" table is ready.');
+    console.log('Table "entries" is ready.');
+
+    // Add the "category" column if it doesn't already exist.
+    await pool.query(`
+      ALTER TABLE entries 
+      ADD COLUMN IF NOT EXISTS category VARCHAR(50);
+    `);
+    console.log('Column "category" is ready.');
   } catch (err) {
     console.error('Error initializing database:', err);
   }
@@ -114,7 +121,7 @@ app.post('/api/entries', async (req, res) => {
     // Log the full response for debugging
     console.log("Full OpenAI response:", JSON.stringify(aiResponse, null, 2));
     
-    // Check that the response structure is as expected (without .data)
+    // Check that the response structure is as expected
     if (!aiResponse.choices || aiResponse.choices.length === 0) {
       console.error("Unexpected OpenAI response:", aiResponse);
       throw new Error("OpenAI API returned no choices");
