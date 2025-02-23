@@ -10,13 +10,13 @@ const crypto = require('crypto');
 // Initialize OpenAI client (using v4 syntax with chat completions)
 const OpenAI = require('openai');
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, // Ensure your OPENAI_API_KEY is set in your environment
+  apiKey: process.env.OPENAI_API_KEY, // Ensure your OPENAI_API_KEY is set
 });
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Generate a random session secret if not provided
+// Use a random session secret if one isn't provided
 const sessionSecret = process.env.SESSION_SECRET || crypto.randomBytes(16).toString('hex');
 
 // Middleware
@@ -32,7 +32,7 @@ app.use(
 // Serve static files from the "public" folder
 app.use(express.static('public'));
 
-// Initialize PostgreSQL connection using Render's environment variable
+// Initialize PostgreSQL connection using environment variable
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
@@ -50,12 +50,12 @@ async function initDb() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
-    // Add the "category" column if it doesn't already exist.
+    // Add the "category" column if it doesn't exist.
     await pool.query(`
       ALTER TABLE entries 
       ADD COLUMN IF NOT EXISTS category VARCHAR(50);
     `);
-    // Add the "session_id" column if it doesn't already exist.
+    // Add the "session_id" column if it doesn't exist.
     await pool.query(`
       ALTER TABLE entries 
       ADD COLUMN IF NOT EXISTS session_id TEXT;
@@ -75,13 +75,29 @@ app.get('/api', (req, res) => {
   res.send('Gratitude API is running.');
 });
 
-// Public entries: show only entries created during the current session (by device)
+// Public entries: show only entries created by the current session.
 app.get('/api/public-entries', async (req, res) => {
   try {
     const result = await pool.query(
       'SELECT * FROM entries WHERE session_id = $1 ORDER BY created_at DESC',
       [req.sessionID]
     );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// All entries: returns all entries with a non-null, non-"Uncategorized" category.
+// This is used for building the word cloud.
+app.get('/api/all-entries', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT * FROM entries 
+      WHERE category IS NOT NULL AND LOWER(category) <> 'uncategorized'
+      ORDER BY created_at DESC
+    `);
     res.json(result.rows);
   } catch (err) {
     console.error(err);
@@ -120,8 +136,7 @@ app.get('/api/entries/:id', async (req, res) => {
 });
 
 // POST to create a new entry (with content)
-// Calls OpenAI for categorization before inserting into the database.
-// Also saves the current session ID with the entry.
+// Calls OpenAI for categorization before inserting into the database and saves the session ID.
 app.post('/api/entries', async (req, res) => {
   try {
     const { content } = req.body;
@@ -129,7 +144,7 @@ app.post('/api/entries', async (req, res) => {
       return res.status(400).json({ error: 'Content is required' });
     }
     
-    // Build messages for chat completions with an example list for guidance.
+    // Build messages for chat completions with guidance examples.
     const messages = [
       {
         role: 'system',
@@ -142,7 +157,6 @@ app.post('/api/entries', async (req, res) => {
     ];
     
     const modelName = 'gpt-3.5-turbo';
-    
     const aiResponse = await openai.chat.completions.create({
       model: modelName,
       messages,

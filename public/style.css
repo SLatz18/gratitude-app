@@ -60,3 +60,12 @@ button:hover {
   color: #486581;
   margin-bottom: 5px;
 }
+
+/* Word cloud styling */
+#wordCloud {
+  padding: 10px;
+  background: #fff;
+  border-radius: 8px;
+  margin-top: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
