@@ -43,25 +43,40 @@ async function updateWordCloud() {
       freq[category] = (freq[category] || 0) + 1;
     }
   });
-  
-  const counts = Object.values(freq);
-  const minCount = Math.min(...counts);
-  const maxCount = Math.max(...counts);
-  const minSize = 14; // in pixels
-  const maxSize = 32; // in pixels
-  
-  const wordCloudDiv = document.getElementById('wordCloud');
-  wordCloudDiv.innerHTML = '';
-  
-  for (const [cat, count] of Object.entries(freq)) {
-    const size = maxCount === minCount
-      ? (minSize + maxSize) / 2
-      : minSize + ((count - minCount) / (maxCount - minCount)) * (maxSize - minSize);
-    const span = document.createElement('span');
-    span.textContent = cat + " ";
-    span.style.fontSize = size + "px";
-    span.style.marginRight = "10px";
-    wordCloudDiv.appendChild(span);
+
+  const words = Object.keys(freq)
+    .filter(word => freq[word] > 1)
+    .map(word => ({ text: word, size: 10 + freq[word] * 10 }));
+
+  d3.select('#wordCloud').html('');
+
+  const layout = d3.layout.cloud()
+    .size([500, 300])
+    .words(words)
+    .padding(5)
+    .rotate(() => ~~(Math.random() * 2) * 90)
+    .font('Montserrat')
+    .fontSize(d => d.size)
+    .on('end', draw);
+
+  layout.start();
+
+  function draw(words) {
+    d3.select('#wordCloud')
+      .append('svg')
+      .attr('width', layout.size()[0])
+      .attr('height', layout.size()[1])
+      .append('g')
+      .attr('transform', 'translate(' + layout.size()[0] / 2 + ',' + layout.size()[1] / 2 + ')')
+      .selectAll('text')
+      .data(words)
+      .enter().append('text')
+      .style('font-family', 'Montserrat')
+      .style('font-size', d => d.size + 'px')
+      .style('fill', '#333')
+      .attr('text-anchor', 'middle')
+      .attr('transform', d => 'translate(' + [d.x, d.y] + ')rotate(' + d.rotate + ')')
+      .text(d => d.text);
   }
 }
 
