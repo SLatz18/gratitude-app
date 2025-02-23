@@ -26,7 +26,7 @@ const pool = new Pool({
 });
 
 // Function to initialize the database (create table if it doesn't exist)
-// and add the 'category' column if it doesn't exist.
+// and add the 'category' column if needed.
 async function initDb() {
   try {
     // Create table if not exists
@@ -95,11 +95,12 @@ app.post('/api/entries', async (req, res) => {
       return res.status(400).json({ error: 'Content is required' });
     }
     
-    // Build messages for chat completions
+    // Build messages for chat completions with an example list of categories for guidance.
+    // The assistant is free to choose any category it deems appropriate.
     const messages = [
       {
         role: 'system',
-        content: "You are a helpful categorization assistant. When given a gratitude entry, categorize it into one of the following: Family, Friends, Work, Health, Personal Growth, or Other. Respond with only the category name.",
+        content: "You are a helpful categorization assistant. When given a gratitude entry, determine the most appropriate category for it. For example, common categories might include Family, Friends, Work, Health, Personal Growth, and Entertainment. However, if none of these fit well, feel free to choose a different category that best describes the entry. Respond with only the category name.",
       },
       {
         role: 'user',
