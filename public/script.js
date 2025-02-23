@@ -74,9 +74,9 @@ async function updateWordCloud() {
 
   // Create the layout for the word cloud
   const layout = d3.layout.cloud()
-    .size([500, 300])
+    .size([600, 300])
     .words(words)
-    .padding(5)
+    .padding(2) //less padding
     .rotate(() => ~~(Math.random() * 2) * 90)
     .font('Montserrat')
     .fontSize(d => d.size)
