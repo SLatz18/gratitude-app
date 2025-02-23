@@ -1,4 +1,4 @@
-const apiUrl = '/api/entries';
+const apiUrl = '/api/public-entries';
 
 async function fetchEntries() {
   try {
@@ -11,7 +11,7 @@ async function fetchEntries() {
       entryDiv.className = 'entry';
       entryDiv.innerHTML = `
         <p class="entry-date">${new Date(entry.created_at).toLocaleString()}</p>
-        <p class="entry-category">Category: ${entry.category || 'Uncategorized'}</p>
+        <p class="entry-category">${entry.category || 'Uncategorized'}</p>
         <p>${entry.content}</p>
       `;
       entriesDiv.appendChild(entryDiv);
@@ -24,9 +24,8 @@ async function fetchEntries() {
 document.getElementById('entryForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const content = document.getElementById('content').value;
-
   try {
-    const response = await fetch(apiUrl, {
+    const response = await fetch('/api/entries', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content })
