@@ -107,6 +107,13 @@ app.post('/api/entries', async (req, res) => {
       max_tokens: 10,
       temperature: 0, // low temperature for deterministic output
     });
+    
+    // Check that the response structure is as expected
+    if (!aiResponse.data || !aiResponse.data.choices || aiResponse.data.choices.length === 0) {
+      console.error("Unexpected OpenAI response:", aiResponse.data);
+      throw new Error("OpenAI API returned no choices");
+    }
+    
     const category = aiResponse.data.choices[0].message.content.trim();
     console.log(`Categorized entry as: ${category}`);
     
